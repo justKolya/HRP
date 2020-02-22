@@ -2,11 +2,14 @@ import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-fromEmail = 'rpismartcamera@gmail.com'
+#Почта камеры
+fromEmail = '***'
 
-fromEmailPassword = 'flatronl1730s'
+#Пароль от почты камеры
+fromEmailPassword = '***'
 
-toEmail = 'ntesla102@gmail.com'
+#Почта владельца
+toEmail = '***'
 
 def sendEmail():
 	msgRoot = MIMEMultipart('related')
