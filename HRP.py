@@ -1,41 +1,36 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
 import numpy as np
 import os
-import six.moves.urllib as urllib
-import sys
-import tarfile
 import tensorflow as tf
-import zipfile
 import cv2
+import time
 
 from toGmail import *
-from collections import defaultdict
-from io import StringIO
-from matplotlib import pyplot as plt
-from PIL import Image
 from utils import label_map_util
 from utils import visualization_utils as vis_util
 
 cap = cv2.VideoCapture(0)
 
-MODEL_NAME = 'human_recognition_graph'
-PATH_TO_CKPT = MODEL_NAME + '/frozen_inference_graph.pb'
-PATH_TO_LABELS = os.path.join('training', 'object-detection.pbtxt')
+model = 'human_recognition_graph'
+graphPath = model + '/frozen_inference_graph.pb'
+labelPath = os.path.join('training', 'object-detection.pbtxt')
 
-NUM_CLASSES = 1
+numberOfClasses = 1
 
 detection_graph = tf.Graph()
 with detection_graph.as_default():
     od_graph_def = tf.GraphDef()
-    with tf.gfile.GFile(PATH_TO_CKPT, 'rb') as fid:
+    with tf.gfile.GFile(graphPath, 'rb') as fid:
         serialized_graph = fid.read()
         od_graph_def.ParseFromString(serialized_graph)
         tf.import_graph_def(od_graph_def, name='')
 
-label_map = label_map_util.load_labelmap(PATH_TO_LABELS)
+label_map = label_map_util.load_labelmap(labelPath)
 categories = label_map_util.convert_label_map_to_categories(
-    label_map, max_num_classes=NUM_CLASSES, use_display_name=True)
+    label_map, max_num_classes=numberOfClasses, use_display_name=True)
 category_index = label_map_util.create_category_index(categories)
-
 
 def load_image_into_numpy_array(image):
     (im_width, im_height) = image.size
@@ -58,10 +53,6 @@ with detection_graph.as_default():
                 [boxes, scores, classes, num_detections],
                 feed_dict={image_tensor: image_np_expanded})
 
-            if abs(np.mean(scores)) > 0.01:
-            	print("SmartSecurityCamera found person!")
-            	sendEmail()
-
             vis_util.visualize_boxes_and_labels_on_image_array(
                 image_np,
                 np.squeeze(boxes),
@@ -76,3 +67,7 @@ with detection_graph.as_default():
             if cv2.waitKey(25) & 0xFF == ord('q'):
                 cv2.destroyAllWindows()
                 break
+
+            if abs(np.mean(scores)) > 0.01:
+                print("SmartSecurityCamera found person!")
+                sendEmail()
