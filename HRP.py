@@ -1,25 +1,26 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+#імпорт необхідних модулів й бібліотек
 import numpy as np
 import os
 import tensorflow as tf
 import cv2
-import time
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 
-from toGmail import *
-from utils import label_map_util
-from utils import visualization_utils as vis_util
+import label_map_util as lm_util
+import visualization_utils as vis_util
 
+#створення екземпляру класу VideoCapture для захоплення зображення з камери
 cap = cv2.VideoCapture(0)
 
-model = 'human_recognition_graph'
-graphPath = model + '/frozen_inference_graph.pb'
-labelPath = os.path.join('training', 'object-detection.pbtxt')
+#шляхи до графу та до файлу міток
+graphPath = 'human_recognition_graph/frozen_inference_graph.pb'
+labelPath = 'training/object-detection.pbtxt'
 
+#правило завантаження замороженого графу у пам'ять
 detection_graph = tf.Graph()
 with detection_graph.as_default():
     od_graph_def = tf.GraphDef()
@@ -28,22 +29,24 @@ with detection_graph.as_default():
         od_graph_def.ParseFromString(serialized_graph)
         tf.import_graph_def(od_graph_def, name='')
 
-label_map = label_map_util.load_labelmap(labelPath)
-categories = label_map_util.convert_label_map_to_categories(
+#завантаження карти міток
+label_map = lm_util.load_labelmap(labelPath)
+categories = lm_util.convert_label_map_to_categories(
     label_map, max_num_classes=1, use_display_name=True)
-category_index = label_map_util.create_category_index(categories)
+category_index = lm_util.create_category_index(categories)
 
+#допоміжна функція для створення "np.array"
 def load_image_into_numpy_array(image):
     (im_width, im_height) = image.size
     return np.array(image.getdata()).reshape(
         (im_height, im_width, 3)).astype(np.uint8)
 
-fromEmail = '************'
+#ініціалізація поштових реквізитів
+fromEmail = '******************'
+fromEmailPassword = '******************'
+toEmail = '******************'
 
-fromEmailPassword = '*************'
-
-toEmail = '**************'
-
+#функція посилання повідомлення на електронну пошту (gmail)
 def sendEmail():
 
 	print("SmartSecurityCamera found person!")
@@ -63,6 +66,7 @@ def sendEmail():
 	smtp.sendmail(fromEmail, toEmail, msgRoot.as_string())
 	smtp.quit()
 
+#процес детекції об'єктів й створення вікна програми
 with detection_graph.as_default():
     with tf.Session(graph=detection_graph) as sess:
         while True:
@@ -78,11 +82,6 @@ with detection_graph.as_default():
             (boxes, scores, classes, num_detections) = sess.run(
                 [boxes, scores, classes, num_detections],
                 feed_dict={image_tensor: image_np_expanded})
-           
-            if abs(np.mean(scores)) > 0.01:
-            	sendEmail()
-
-            #print(abs(np.mean(scores)))
 
             vis_util.visualize_boxes_and_labels_on_image_array(
                 image_np,
@@ -93,7 +92,11 @@ with detection_graph.as_default():
                 use_normalized_coordinates=True,
                 line_thickness=8)
 
+            # if abs(np.mean(scores)) > 0.01:
+            #     sendEmail()
+
             cv2.imshow('HRP', cv2.resize(image_np, (800, 600)))
+            cv2.imwrite('images/image.jpg', image_np)
 
             if cv2.waitKey(25) & 0xFF == ord('q'):
                 cv2.destroyAllWindows()
